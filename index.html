@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="brand-loading">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -38,6 +38,10 @@ input,textarea,select{font-family:var(--sans)}
 .eclipse{position:absolute;top:50%;left:6%;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 60% 40%,#17131f,#08070a 70%);transform:translateY(-50%);box-shadow:0 0 90px 10px rgba(0,0,0,.6);pointer-events:none}
 .hero-img{position:absolute;inset:0;background-size:cover;background-position:center;pointer-events:none;display:none}
 .grain{position:absolute;inset:0;pointer-events:none;opacity:.5;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");mix-blend-mode:overlay}
+/* Hold backgrounds hidden until branding loads, then fade the correct one in.
+   Prevents the default beam flashing before an uploaded image appears. */
+.beam,.eclipse,.grain,.hero-img{transition:opacity .45s ease}
+html.brand-loading .beam,html.brand-loading .eclipse,html.brand-loading .grain,html.brand-loading .hero-img{opacity:0 !important}
 .splash-inner{position:relative;z-index:2;width:100%}
 .splash-logo{display:none;max-height:60px;margin:0 auto 22px}
 .splash-eyebrow{font-size:clamp(18px,2.4vw,26px);text-align:center;margin-bottom:6px}
@@ -422,6 +426,7 @@ async function boot(){
   if(!BRAND.texts) BRAND.texts={};
   if(!BRAND.fonts) BRAND.fonts={};
   applyBrand();
+  document.documentElement.classList.remove('brand-loading'); /* reveal correct background */
 }
 
 function txt(key){const v=BRAND.texts&&BRAND.texts[key];const m=MASTER_TEXTS.find(x=>x.key===key);return (v&&v.trim())?v:(m?m.def:'');}
@@ -601,6 +606,7 @@ function exportOne(id){const s=SUBS.find(x=>x.id===id);download(`onboarding-${sl
 function exportAll(){download(`saudade-onboarding-all-${new Date().toISOString().slice(0,10)}.md`,SUBS.map(subToMd).join('\n\n---\n\n'));}
 let toastT;function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
 
+setTimeout(()=>document.documentElement.classList.remove('brand-loading'),4000); /* safety net if branding is slow to load */
 boot();
 </script>
 </body>
