@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Saudade — Client Onboarding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&family=Archivo:wght@400;500;600;700;800;900&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SAUDADE ONBOARDING PORTAL — single-file webapp
+   Everything visible is editable from the admin "Branding" tab:
+   logo, hero image, accent colour, and every text string.
+   Form fields are editable from the admin "Form fields" tab.
+   Admin sign-in uses Supabase Auth (email + password); see supabase-schema.sql.
+   ============================================================ */
+:root{
+  --ink:#0a0a0b;--ink-soft:#141416;--ink-card:#161619;
+  --line:rgba(255,255,255,0.10);--line-strong:rgba(255,255,255,0.22);
+  --white:#f7f5f2;--muted:#a3a1a0;--muted-2:#78767a;
+  --serif:'Playfair Display',Georgia,serif;--sans:'Archivo',system-ui,-apple-system,sans-serif;
+  --radius:14px;
+  --beam:linear-gradient(92deg,#7b4bff 0%,#4d63ff 14%,#c33bff 30%,#ff3b6b 48%,#ff5a2c 64%,#ff9d1f 80%,#ffd21f 100%);
+  --accent:var(--beam);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--ink);color:var(--white);font-family:var(--sans);font-weight:400;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
+button{font-family:var(--sans);cursor:pointer}
+input,textarea,select{font-family:var(--sans)}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+.hidden{display:none !important}
+.eyebrow{font-family:var(--serif);font-style:italic;font-weight:500;color:var(--white);letter-spacing:.2px}
+.display{font-family:var(--sans);font-weight:800;line-height:1.02;letter-spacing:-.02em}
+#splash{position:relative;min-height:100vh;overflow:hidden;display:flex;align-items:center}
+.beam{position:absolute;top:50%;left:-6%;width:120%;height:46%;transform:translateY(-50%) rotate(-7deg);background:var(--beam);filter:blur(58px) saturate(1.15);opacity:.92;clip-path:polygon(0 42%,100% 0,100% 100%,0 58%);pointer-events:none}
+.eclipse{position:absolute;top:50%;left:6%;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 60% 40%,#17131f,#08070a 70%);transform:translateY(-50%);box-shadow:0 0 90px 10px rgba(0,0,0,.6);pointer-events:none}
+.hero-img{position:absolute;inset:0;background-size:cover;background-position:center;pointer-events:none;display:none}
+.grain{position:absolute;inset:0;pointer-events:none;opacity:.5;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");mix-blend-mode:overlay}
+.splash-inner{position:relative;z-index:2;width:100%}
+.splash-logo{display:none;max-height:60px;margin:0 auto 22px}
+.splash-eyebrow{font-size:clamp(18px,2.4vw,26px);text-align:center;margin-bottom:6px}
+.splash-eyebrow .small{display:block;font-size:.8em;margin-top:2px}
+.splash-title{text-align:center;font-size:clamp(44px,8vw,104px);margin:26px auto 40px;max-width:12ch}
+.entry-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.entry-btn{background:rgba(10,10,11,.55);border:1px solid var(--line-strong);color:var(--white);padding:16px 30px;border-radius:100px;font-size:16px;font-weight:600;backdrop-filter:blur(6px);transition:transform .15s ease,background .2s ease,border-color .2s ease}
+.entry-btn:hover{transform:translateY(-2px);background:rgba(255,255,255,.08);border-color:var(--white)}
+.entry-btn .ico{margin-right:10px;font-style:normal;opacity:.85}
+.splash-foot{position:absolute;bottom:26px;left:0;right:0;z-index:2;text-align:center;color:var(--muted);font-family:var(--serif);font-style:italic;font-size:15px}
+.page{min-height:100vh;padding:34px 0 80px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:12px}
+.brand{font-family:var(--serif);font-style:italic;font-weight:600;font-size:20px;display:flex;align-items:center;gap:10px}
+.brand .by{color:var(--muted);font-size:.8em}
+.brand-logo{display:none;max-height:30px}
+.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);padding:9px 16px;border-radius:100px;font-size:13px;font-weight:500;transition:.2s}
+.ghost:hover{border-color:var(--line-strong);color:var(--white)}
+.form-head{margin:18px 0 6px}
+.form-head h1{font-size:clamp(30px,5vw,52px);margin:0 0 10px;font-weight:800;letter-spacing:-.02em}
+.form-head p{color:var(--muted);max-width:56ch;margin:0}
+.progress{display:flex;gap:8px;margin:26px 0 4px;flex-wrap:wrap}
+.progress .dot{height:4px;flex:1;min-width:24px;border-radius:4px;background:var(--line)}
+.progress .dot.done{background:var(--accent)}
+.progress .dot.active{background:rgba(255,255,255,.55)}
+.step-label{color:var(--muted-2);font-size:13px;letter-spacing:.14em;text-transform:uppercase;margin:22px 0 4px}
+.section-title{font-size:26px;font-weight:700;letter-spacing:-.01em;margin:0 0 22px}
+.field{margin-bottom:22px}
+.field label{display:block;font-size:15px;font-weight:500;margin-bottom:8px;color:var(--white)}
+.field .req{color:#ff6b6b;margin-left:3px}
+.control{width:100%;background:var(--ink-soft);border:1px solid var(--line);color:var(--white);border-radius:12px;padding:13px 15px;font-size:15px;transition:.18s}
+.control::placeholder{color:var(--muted-2)}
+.control:focus{outline:none;border-color:var(--line-strong);box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+textarea.control{min-height:110px;resize:vertical;line-height:1.6}
+select.control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%23a3a1a0' stroke-width='2'%3E%3Cpath d='M3 5l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 15px center;padding-right:40px}
+.choices{display:flex;flex-direction:column;gap:10px}
+.choice{display:flex;align-items:center;gap:12px;padding:12px 15px;border:1px solid var(--line);border-radius:12px;background:var(--ink-soft);cursor:pointer;transition:.16s;font-size:15px}
+.choice:hover{border-color:var(--line-strong)}
+.choice.sel{border:1px solid transparent;background:linear-gradient(var(--ink-card),var(--ink-card)) padding-box,var(--accent) border-box}
+.choice input{accent-color:#c33bff;width:17px;height:17px;flex:none}
+.err-msg{color:#ff6b6b;font-size:13px;margin-top:7px;display:none}
+.field.invalid .control{border-color:#ff6b6b}
+.field.invalid .err-msg{display:block}
+.form-nav{display:flex;justify-content:space-between;gap:12px;margin-top:34px;padding-top:24px;border-top:1px solid var(--line)}
+.btn{border:none;border-radius:100px;padding:14px 30px;font-size:15px;font-weight:600;transition:transform .15s ease,filter .2s ease}
+.btn-primary{background:var(--accent);color:#0a0a0b}
+.btn-primary:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.btn-secondary{background:transparent;border:1px solid var(--line-strong);color:var(--white)}
+.btn-secondary:hover{background:rgba(255,255,255,.06)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+#thanks{min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden}
+#thanks .beam{height:38%;opacity:.8}
+.thanks-inner{position:relative;z-index:2;text-align:center;width:100%}
+.thanks-inner .eyebrow{font-size:22px}
+.thanks-inner h1{font-size:clamp(38px,7vw,80px);font-weight:800;letter-spacing:-.02em;margin:18px auto 18px;max-width:14ch}
+.thanks-inner p{color:var(--muted);max-width:48ch;margin:0 auto 34px;font-size:17px}
+.lock-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.lock-card{width:100%;max-width:400px;text-align:center}
+.lock-card .eyebrow{font-size:20px}
+.lock-card h2{font-size:30px;font-weight:800;letter-spacing:-.01em;margin:14px 0 6px}
+.lock-card p{color:var(--muted);margin:0 0 22px;font-size:14px}
+.lock-card .control{text-align:center;margin-bottom:12px}
+.tabs{display:flex;gap:4px;background:var(--ink-soft);padding:4px;border-radius:100px;width:fit-content;margin:24px 0 30px;border:1px solid var(--line);flex-wrap:wrap}
+.tab{background:transparent;border:none;color:var(--muted);padding:9px 20px;border-radius:100px;font-size:14px;font-weight:500;transition:.18s}
+.tab.active{background:var(--white);color:var(--ink)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.panel-head h2{font-size:24px;font-weight:700;margin:0;letter-spacing:-.01em}
+.count-pill{color:var(--muted);font-size:14px}
+.fieldrow{background:var(--ink-card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:14px}
+.fieldrow .grab{color:var(--muted-2);font-size:18px;padding-top:2px;user-select:none}
+.fieldrow .meta{flex:1;min-width:0}
+.fieldrow .fl-label{font-weight:500;font-size:15px}
+.tag{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:100px;padding:2px 9px;margin-right:6px;margin-top:6px}
+.tag.off{opacity:.5;text-decoration:line-through}
+.fieldrow .acts{display:flex;gap:6px;flex:none}
+.icon-btn{background:transparent;border:1px solid var(--line);color:var(--muted);width:34px;height:34px;border-radius:9px;font-size:14px;transition:.16s;display:flex;align-items:center;justify-content:center}
+.icon-btn:hover{border-color:var(--line-strong);color:var(--white)}
+.icon-btn.danger:hover{border-color:#ff6b6b;color:#ff6b6b}
+.overlay{position:absolute;inset:0;min-height:100vh;background:rgba(4,4,6,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:60px 20px;z-index:50}
+.modal{background:var(--ink-card);border:1px solid var(--line-strong);border-radius:16px;width:100%;max-width:520px;padding:26px}
+.modal h3{margin:0 0 18px;font-size:20px;font-weight:700}
+.modal .field{margin-bottom:16px}
+.modal .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.toggle-line{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted);margin-bottom:16px}
+.toggle-line input{accent-color:#c33bff;width:16px;height:16px}
+.modal-nav{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+.opt-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.opt-item{display:flex;gap:8px}
+.opt-item .control{flex:1}
+.link-btn{background:none;border:none;color:#c9a2ff;font-size:13px;font-weight:500;padding:4px 0;text-align:left}
+.sub-card{background:var(--ink-card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:14px;transition:.16s}
+.sub-card:hover{border-color:var(--line-strong)}
+.sub-card .who{font-weight:600;font-size:16px}
+.sub-card .when{color:var(--muted-2);font-size:13px;margin-top:2px}
+.sub-detail{background:var(--ink-card);border:1px solid var(--line);border-radius:12px;padding:8px 22px 22px;margin-bottom:14px}
+.sub-detail .qa{padding:16px 0;border-bottom:1px solid var(--line)}
+.sub-detail .qa:last-child{border-bottom:none}
+.sub-detail .q{color:var(--muted);font-size:13px;margin-bottom:6px}
+.sub-detail .a{font-size:15px;white-space:pre-wrap;line-height:1.6}
+.sub-detail .a.empty{color:var(--muted-2);font-style:italic}
+.empty-state{text-align:center;color:var(--muted);padding:70px 20px;border:1px dashed var(--line);border-radius:14px}
+.empty-state h3{color:var(--white);font-weight:600;margin:0 0 8px;font-size:18px}
+.brand-block{background:var(--ink-card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:16px}
+.brand-block h3{margin:0 0 4px;font-size:17px;font-weight:600}
+.brand-block .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+.asset-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.asset-preview{width:120px;height:72px;border-radius:10px;border:1px solid var(--line);background:#0e0e10 center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--muted-2);font-size:12px;flex:none;overflow:hidden}
+.asset-preview.logo{background-size:contain;background-repeat:no-repeat;background-position:center}
+.upload-btn{position:relative;overflow:hidden}
+.upload-btn input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.radio-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.radio-pill{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:100px;padding:8px 16px;font-size:14px;color:var(--muted);cursor:pointer}
+.radio-pill.on{border:1px solid transparent;background:linear-gradient(var(--ink-card),var(--ink-card)) padding-box,var(--accent) border-box;color:var(--white)}
+.radio-pill input{display:none}
+.color-row{display:flex;align-items:center;gap:12px}
+.color-row input[type=color]{width:46px;height:38px;border:1px solid var(--line);border-radius:10px;background:none;padding:2px;cursor:pointer}
+.tx-grid{display:grid;grid-template-columns:1fr;gap:14px}
+.tx-item label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.hint-note{color:var(--muted-2);font-size:12px;margin-top:8px}
+/* branding page sub-nav */
+.subnav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.subnav .snav{background:var(--ink-soft);border:1px solid var(--line);color:var(--muted);padding:8px 16px;border-radius:100px;font-size:13px;font-weight:500;transition:.16s}
+.subnav .snav.on{border-color:transparent;background:var(--white);color:var(--ink)}
+/* per-element text + font row */
+.tx-row{margin-bottom:16px}
+.tx-row label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.tx-row .inl{display:flex;gap:8px;align-items:flex-start}
+.tx-row .inl .control{flex:1}
+.tx-row .fontsel{flex:none;width:180px;max-width:44%}
+/* preview */
+.pv{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:20px;position:relative;background:var(--ink)}
+.pv-label{position:absolute;top:10px;left:12px;z-index:5;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2)}
+.pv-screen{position:relative;min-height:250px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:34px 24px;text-align:center;overflow:hidden}
+.pv-bg{position:absolute;inset:0;pointer-events:none}
+.pv-beam{position:absolute;top:50%;left:-6%;width:120%;height:46%;transform:translateY(-50%) rotate(-7deg);background:var(--beam);filter:blur(30px);opacity:.9;clip-path:polygon(0 42%,100% 0,100% 100%,0 58%)}
+.pv-eclipse{position:absolute;top:50%;left:10%;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 60% 40%,#17131f,#08070a 70%);transform:translateY(-50%)}
+.pv-content{position:relative;z-index:2;width:100%}
+.pv-logo{max-height:34px;margin:0 auto 10px;display:block}
+.pv-eyebrow{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--white)}
+.pv-eyebrow.sm{font-size:12px;opacity:.85;margin-bottom:4px}
+.pv-title{font-weight:800;font-size:30px;line-height:1.05;letter-spacing:-.02em;margin:8px auto;color:var(--white);max-width:16ch}
+.pv-sub{color:var(--muted);font-size:13px;max-width:44ch;margin:2px auto}
+.pv-foot{color:var(--muted);font-family:var(--serif);font-style:italic;font-size:12px;margin-top:10px}
+.pv-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+.pv-btn{border:1px solid var(--line-strong);border-radius:100px;padding:8px 18px;font-size:13px;font-weight:600;color:var(--white)}
+.pv-btn.solid{background:var(--accent);color:#0a0a0b;border-color:transparent}
+.pv-wordmark{font-family:var(--serif);font-style:italic;font-weight:600;font-size:16px;text-align:left;color:var(--white)}
+.pv-field{width:100%;max-width:360px;text-align:left;margin:4px auto}
+.pv-field .fl{font-size:12px;color:var(--white);margin-bottom:5px}
+.pv-field .bx{height:30px;border:1px solid var(--line);border-radius:8px;background:var(--ink-soft)}
+.pv-note{color:var(--muted-2);font-size:12px;text-align:center;margin-top:6px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--white);color:var(--ink);padding:12px 22px;border-radius:100px;font-size:14px;font-weight:500;opacity:0;transition:.25s;z-index:100;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:560px){.modal .row2{grid-template-columns:1fr}.entry-btn{width:100%;max-width:320px}.eclipse{display:none}}
+</style>
+</head>
+<body>
+
+<section id="splash">
+  <div class="hero-img" id="heroSplash"></div>
+  <div class="beam" data-beam></div>
+  <div class="eclipse" data-beam></div>
+  <div class="grain"></div>
+  <div class="splash-inner wrap">
+    <img class="splash-logo" id="logoSplash" alt="" />
+    <div class="splash-eyebrow eyebrow"><span data-tx="eyebrow1">Strategic Content Marketing</span><span class="small" data-tx="eyebrow2">by Saudade</span></div>
+    <h1 class="splash-title display" data-tx="splashTitle">Let’s get you set up</h1>
+    <div class="entry-row">
+      <button class="entry-btn" onclick="go('client')"><i class="ico">◇</i><span data-tx="clientBtn">I’m a client</span></button>
+      <button class="entry-btn" onclick="adminEntry()"><i class="ico">✦</i><span data-tx="adminBtn">I’m Saudade</span></button>
+    </div>
+  </div>
+  <div class="splash-foot" data-tx="splashFoot">a warm welcome to the work ahead</div>
+</section>
+
+<section id="client" class="page hidden">
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand"><img class="brand-logo" data-logo alt="" /><span><span data-tx="wordmark">Saudade</span> <span class="by">/ onboarding</span></span></div>
+      <button class="ghost" onclick="confirmHome()" data-tx="leaveBtn">Leave</button>
+    </div>
+    <div class="form-head">
+      <h1 data-tx="formTitle">Welcome — tell us about you</h1>
+      <p data-tx="formIntro">A few questions so we can hit the ground running. It takes about ten minutes, and there are no wrong answers.</p>
+    </div>
+    <div class="progress" id="progress"></div>
+    <div id="formBody"></div>
+    <div class="form-nav">
+      <button class="btn btn-secondary" id="backBtn" onclick="prevStep()">Back</button>
+      <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">Continue</button>
+    </div>
+  </div>
+</section>
+
+<section id="thanks" class="hidden">
+  <div class="hero-img" id="heroThanks"></div>
+  <div class="beam" data-beam></div>
+  <div class="grain"></div>
+  <div class="thanks-inner wrap">
+    <div class="eyebrow" data-tx="thanksEyebrow">by Saudade</div>
+    <h1 class="display" data-tx="thanksTitle">Thank you — we’ve got it</h1>
+    <p data-tx="thanksBody">Your answers are with us. We’ll review everything and come back to you shortly to line up the kick-off.</p>
+    <button class="btn btn-primary" onclick="go('splash')" data-tx="thanksBtn">Return home</button>
+  </div>
+</section>
+
+<section id="lock" class="hidden">
+  <div class="lock-wrap">
+    <div class="lock-card">
+      <div class="eyebrow" data-tx="lockEyebrow">by Saudade</div>
+      <h2 data-tx="lockTitle">Admin access</h2>
+      <p data-tx="lockBody">Sign in to manage the form and view submissions.</p>
+      <input type="email" class="control" id="emailInput" placeholder="Email" autocomplete="username" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')tryUnlock()" />
+      <input type="password" class="control" id="passInput" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')tryUnlock()" />
+      <div class="err-msg" id="passErr" style="display:none">That didn’t work. Check your email and password.</div>
+      <button class="btn btn-primary" style="width:100%" id="unlockBtn" onclick="tryUnlock()">Sign in</button>
+      <div style="margin-top:18px"><button class="ghost" onclick="go('splash')">← Back home</button></div>
+    </div>
+  </div>
+</section>
+
+<section id="admin" class="page hidden">
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand"><img class="brand-logo" data-logo alt="" /><span><span data-tx="wordmark">Saudade</span> <span class="by">/ admin</span></span></div>
+      <button class="ghost" onclick="adminSignOut()">Sign out</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" id="tabFields" onclick="showTab('fields')">Form fields</button>
+      <button class="tab" id="tabSubs" onclick="showTab('subs')">Submissions</button>
+      <button class="tab" id="tabBrand" onclick="showTab('brand')">Branding</button>
+    </div>
+
+    <div id="panelFields">
+      <div class="panel-head"><h2>Form fields</h2><button class="btn btn-secondary" style="padding:11px 20px;font-size:14px" onclick="openEditor()">+ Add field</button></div>
+      <div id="fieldList"></div>
+    </div>
+
+    <div id="panelSubs" class="hidden">
+      <div class="panel-head"><h2>Submissions <span class="count-pill" id="subCount"></span></h2><button class="btn btn-secondary" style="padding:11px 20px;font-size:14px" id="bulkBtn" onclick="exportAll()">Download all (.md)</button></div>
+      <div id="subList"></div>
+    </div>
+
+    <div id="panelBrand" class="hidden">
+      <div class="panel-head"><h2>Branding</h2><button class="ghost" onclick="resetBrand()">Reset all branding</button></div>
+      <div class="subnav" id="brandSubnav">
+        <button class="snav on" data-bpage="home" onclick="showBrandPage('home')">Home page</button>
+        <button class="snav" data-bpage="form" onclick="showBrandPage('form')">Form page</button>
+        <button class="snav" data-bpage="thanks" onclick="showBrandPage('thanks')">Thank-you page</button>
+        <button class="snav" data-bpage="global" onclick="showBrandPage('global')">Global</button>
+      </div>
+      <div id="brandPageBody"></div>
+    </div>
+  </div>
+</section>
+
+<div id="editorMount"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   SUPABASE CONFIG — replace the two values below with your own.
+   Find them in your Supabase dashboard:
+     • Project Settings → API → "Project URL"
+     • Project Settings → API Keys → "anon public" key
+   Both are safe to keep in this file. Access is controlled by the
+   Row Level Security policies you ran from supabase-schema.sql,
+   not by hiding these values.
+   ============================================================ */
+const SUPABASE_URL='https://nkyyvpappkbyxrzoniss.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_xykuT7fYyonfTqMz7b_2Iw_20InG7Zo';
+
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+const K_FIELDS='saudade:fields',K_SUBS='saudade:submissions',K_BRAND='saudade:brand';
+const CFG_NAME={[K_FIELDS]:'fields',[K_BRAND]:'brand'};
+
+/* ---- Supabase storage layer ----
+   Config (fields + branding) lives in app_config: public read, admin write.
+   Submissions live in submissions: anyone inserts, only admin reads/deletes. */
+async function sbGetConfig(key){
+  const name=CFG_NAME[key]||key;
+  const {data,error}=await sb.from('app_config').select('value').eq('key',name).maybeSingle();
+  if(error){console.error('config read',error);return null;}
+  return data?data.value:null;
+}
+async function sbSetConfig(key,val){
+  const name=CFG_NAME[key]||key;
+  const {error}=await sb.from('app_config').upsert({key:name,value:val,updated_at:new Date().toISOString()});
+  if(error){console.error('config write',error);toast('Save failed — are you still signed in?');}
+}
+async function sbLoadSubmissions(){
+  const {data,error}=await sb.from('submissions').select('*').order('submitted_at',{ascending:false});
+  if(error){console.error('subs read',error);return [];}
+  return (data||[]).map(r=>({id:r.id,client:r.client,submittedAt:r.submitted_at,answers:r.answers||{}}));
+}
+async function sbInsertSubmission(rec){
+  const {error}=await sb.from('submissions').insert({client:rec.client,answers:rec.answers,submitted_at:rec.submittedAt});
+  if(error){console.error('subs insert',error);throw error;}
+}
+async function sbDeleteSubmission(id){
+  const {error}=await sb.from('submissions').delete().eq('id',id);
+  if(error){console.error('subs delete',error);toast('Delete failed.');}
+}
+async function isAdmin(){const {data}=await sb.auth.getSession();return !!(data&&data.session);}
+
+/* Back-compat shims: existing config reads/writes route through Supabase. */
+async function dbGet(key){return await sbGetConfig(key);}
+async function dbSet(key,val){return await sbSetConfig(key,val);}
+
+/* Copy-font options. Key is stored in BRAND.font; 'archivo' is the default look. */
+const FONT_MAP={
+  archivo:{label:'Archivo (default)',stack:"'Archivo',system-ui,-apple-system,sans-serif"},
+  bricolage:{label:'Bricolage Grotesque',stack:"'Bricolage Grotesque',system-ui,sans-serif"},
+  dmsans:{label:'DM Sans',stack:"'DM Sans',system-ui,sans-serif"},
+  baskerville:{label:'Libre Baskerville',stack:"'Libre Baskerville',Georgia,serif"},
+};
+
+const MASTER_TEXTS=[
+  {key:'wordmark',label:'Brand wordmark (header)',def:'Saudade'},
+  {key:'eyebrow1',label:'Welcome — eyebrow line 1',def:'Strategic Content Marketing'},
+  {key:'eyebrow2',label:'Welcome — eyebrow line 2',def:'by Saudade'},
+  {key:'splashTitle',label:'Welcome — headline',def:'Let’s get you set up'},
+  {key:'clientBtn',label:'Welcome — client button',def:'I’m a client'},
+  {key:'adminBtn',label:'Welcome — admin button',def:'I’m Saudade'},
+  {key:'splashFoot',label:'Welcome — footer line',def:'a warm welcome to the work ahead'},
+  {key:'formTitle',label:'Form — headline',def:'Welcome — tell us about you'},
+  {key:'formIntro',label:'Form — intro paragraph',def:'A few questions so we can hit the ground running. It takes about ten minutes, and there are no wrong answers.'},
+  {key:'leaveBtn',label:'Form — leave button',def:'Leave'},
+  {key:'navBack',label:'Form — back button',def:'Back'},
+  {key:'navContinue',label:'Form — continue button',def:'Continue'},
+  {key:'navSubmit',label:'Form — submit button',def:'Submit'},
+  {key:'thanksEyebrow',label:'Thank you — eyebrow',def:'by Saudade'},
+  {key:'thanksTitle',label:'Thank you — headline',def:'Thank you — we’ve got it'},
+  {key:'thanksBody',label:'Thank you — body',def:'Your answers are with us. We’ll review everything and come back to you shortly to line up the kick-off.'},
+  {key:'thanksBtn',label:'Thank you — button',def:'Return home'},
+  {key:'lockEyebrow',label:'Admin lock — eyebrow',def:'by Saudade'},
+  {key:'lockTitle',label:'Admin lock — heading',def:'Admin access'},
+  {key:'lockBody',label:'Admin lock — body',def:'Sign in to manage the form and view submissions.'},
+];
+
+/* which text keys belong to which Branding sub-page */
+const PAGE_MAP={
+  home:['eyebrow1','eyebrow2','splashTitle','clientBtn','adminBtn','splashFoot'],
+  form:['wordmark','formTitle','formIntro','leaveBtn','navBack','navContinue','navSubmit'],
+  thanks:['thanksEyebrow','thanksTitle','thanksBody','thanksBtn'],
+  global:['lockEyebrow','lockTitle','lockBody'],
+};
+
+const DEFAULT_FIELDS=[
+  {section:'Logistics',label:'Company name',type:'text',required:true,active:true},
+  {section:'Logistics',label:'Primary contact person',type:'text',required:true,active:true},
+  {section:'Logistics',label:'Invoice details',type:'textarea',required:true,active:true},
+  {section:'Logistics',label:'Preferred kick-off date',type:'date',required:false,active:true},
+  {section:'Goals',label:'What are your main goals for our collaboration in the next 6 months?',type:'textarea',required:true,active:true},
+  {section:'Goals',label:'What does success look like for you?',type:'textarea',required:true,active:true},
+  {section:'About you',label:'Briefly describe your company and its mission',type:'textarea',required:true,active:true},
+  {section:'About you',label:'What are your unique selling points (USPs)?',type:'textarea',required:true,active:true},
+  {section:'About you',label:'Who are your primary target audiences?',type:'textarea',required:true,active:true},
+  {section:'Brand voice',label:'How would you describe your brand’s tone of voice?',type:'text',required:true,active:true},
+  {section:'Brand voice',label:'Any examples of content (yours or others) that reflect the tone you’d like to maintain?',type:'textarea',required:false,active:true},
+  {section:'Brand voice',label:'Does your tone of voice differ based on the type of content?',type:'textarea',required:false,active:true},
+  {section:'Landscape',label:'Are there competitors you admire or want to differentiate from?',type:'textarea',required:false,active:true},
+  {section:'Landscape',label:'Are there companies or brands you look to for inspiration?',type:'textarea',required:false,active:true},
+  {section:'Content',label:'What type of content do you want to prioritize?',type:'multiselect',required:true,active:true,options:['LinkedIn posts','Blog / SEO articles','Video','Webinars','Email newsletters','Case studies','Whitepapers','Other']},
+  {section:'Content',label:'Do you have any existing content assets or repositories we should use?',type:'textarea',required:false,active:true},
+  {section:'Ways of working',label:'How often would you like to receive updates or check-ins?',type:'select',required:true,active:true,options:['Weekly','Every 2 weeks','Monthly','As needed']},
+  {section:'Ways of working',label:'What tools or platforms are you currently using for marketing and communication?',type:'textarea',required:false,active:true},
+  {section:'Ways of working',label:'Are there any specific tools you’d like me to integrate into the workflow?',type:'textarea',required:false,active:true},
+  {section:'Ways of working',label:'Are there any restrictions, approvals, or processes we should follow?',type:'textarea',required:false,active:true},
+  {section:'Ways of working',label:'Do you have a marketing budget? If so, please share the monthly amount.',type:'text',required:false,active:true},
+  {section:'Anything else',label:'Is there anything else you’d like to share?',type:'textarea',required:false,active:true},
+].map((f,i)=>({id:'f'+(i+1)+'_'+Math.random().toString(36).slice(2,6),sort:i,...f}));
+
+let FIELDS=[],SUBS=[],BRAND={logo:null,hero:null,heroMode:'beam',accent:null,font:null,fonts:{},texts:{}};
+let answers={},stepIndex=0,sections=[];
+
+async function boot(){
+  FIELDS=await sbGetConfig(K_FIELDS); if(!FIELDS||!FIELDS.length){FIELDS=DEFAULT_FIELDS;if(await isAdmin())await sbSetConfig(K_FIELDS,FIELDS);}
+  SUBS=[]; /* submissions are loaded from Supabase only after the admin signs in */
+  const b=await sbGetConfig(K_BRAND); if(b) BRAND=Object.assign(BRAND,b);
+  if(!BRAND.texts) BRAND.texts={};
+  if(!BRAND.fonts) BRAND.fonts={};
+  applyBrand();
+}
+
+function txt(key){const v=BRAND.texts&&BRAND.texts[key];const m=MASTER_TEXTS.find(x=>x.key===key);return (v&&v.trim())?v:(m?m.def:'');}
+function elemFont(key){const fk=BRAND.fonts&&BRAND.fonts[key];return (fk&&FONT_MAP[fk])?FONT_MAP[fk].stack:'';}
+function applyBrand(){
+  document.querySelectorAll('[data-tx]').forEach(el=>{const key=el.getAttribute('data-tx');el.textContent=txt(key);el.style.fontFamily=elemFont(key);});
+  const showLogo=!!BRAND.logo;
+  const ls=document.getElementById('logoSplash');ls.style.display=showLogo?'block':'none';if(showLogo)ls.src=BRAND.logo;
+  document.querySelectorAll('[data-logo]').forEach(img=>{img.style.display=showLogo?'block':'none';if(showLogo)img.src=BRAND.logo;});
+  const useImg=BRAND.heroMode==='image'&&!!BRAND.hero;
+  const scrim='linear-gradient(rgba(10,10,11,.45),rgba(10,10,11,.68))';
+  ['heroSplash','heroThanks'].forEach(id=>{const el=document.getElementById(id);el.style.display=useImg?'block':'none';if(useImg)el.style.backgroundImage=`${scrim},url(${BRAND.hero})`;});
+  document.querySelectorAll('[data-beam]').forEach(el=>{el.style.display=useImg?'none':'';});
+  if(BRAND.accent) document.documentElement.style.setProperty('--accent',BRAND.accent);
+  else document.documentElement.style.removeProperty('--accent');
+  document.documentElement.style.setProperty('--sans',(FONT_MAP[BRAND.font]||FONT_MAP.archivo).stack);
+}
+async function saveBrand(){await dbSet(K_BRAND,BRAND);applyBrand();}
+function encodeBitmap(bmp,maxW,asPng){let w=bmp.width,h=bmp.height;if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(bmp,0,0,w,h);return c.toDataURL(asPng?'image/png':'image/jpeg',asPng?undefined:0.85);}
+async function scaleImage(file,maxW,asPng){
+  if('createImageBitmap' in window){
+    try{const bmp=await createImageBitmap(file);return encodeBitmap(bmp,maxW,asPng);}catch(e){/* fall through */}
+  }
+  return await new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>{const img=new Image();img.onload=()=>{try{res(encodeBitmap(img,maxW,asPng));}catch(e){rej(e);}};img.onerror=()=>rej(new Error('decode'));img.src=r.result;};
+    r.onerror=()=>rej(new Error('read'));r.readAsDataURL(file);
+  });
+}
+async function onUpload(ev,kind){
+  const file=ev.target.files[0];if(!file)return;
+  try{const isLogo=kind==='logo';const url=await scaleImage(file,isLogo?512:1920,isLogo);
+    if(url.length>4500000){toast('That image is too large even after scaling. Try a smaller one.');ev.target.value='';return;}
+    if(isLogo)BRAND.logo=url;else{BRAND.hero=url;if(BRAND.heroMode!=='image')BRAND.heroMode='image';}
+    await saveBrand();renderBrand();toast(isLogo?'Logo updated':'Hero image updated');
+  }catch(e){toast('Couldn’t read that image file.');}
+  ev.target.value='';
+}
+async function clearAsset(kind){if(kind==='logo')BRAND.logo=null;else{BRAND.hero=null;BRAND.heroMode='beam';}await saveBrand();renderBrand();toast('Removed');}
+async function setHeroMode(m){if(m==='image'&&!BRAND.hero){toast('Upload an image first.');renderBrand();return;}BRAND.heroMode=m;await saveBrand();renderBrand();}
+async function setAccent(v){BRAND.accent=v;await saveBrand();refreshPreview();}
+async function setFont(v){BRAND.font=(v==='archivo')?null:v;await saveBrand();refreshPreview();}
+async function setElemFont(key,val){if(!BRAND.fonts)BRAND.fonts={};if(val==='base')delete BRAND.fonts[key];else BRAND.fonts[key]=val;await saveBrand();refreshPreview();}
+async function clearAccent(){BRAND.accent=null;await saveBrand();renderBrand();}
+async function resetBrand(){if(!confirm('Reset all branding to the defaults? Uploaded images, fonts and text edits will be cleared.'))return;BRAND={logo:null,hero:null,heroMode:'beam',accent:null,font:null,fonts:{},texts:{}};await saveBrand();renderBrand();toast('Branding reset');}
+let brandPage='home';
+function showBrandPage(p){brandPage=p;renderBrand();}
+function renderBrand(){
+  document.querySelectorAll('#brandSubnav .snav').forEach(b=>b.classList.toggle('on',b.dataset.bpage===brandPage));
+  document.getElementById('brandPageBody').innerHTML='<div id="pvHost"></div><div id="ctrlHost"></div>';
+  document.getElementById('pvHost').innerHTML=preview(brandPage);
+  document.getElementById('ctrlHost').innerHTML=controls(brandPage);
+  const lp=document.getElementById('logoPrev');if(lp)lp.style.backgroundImage=BRAND.logo?`url(${BRAND.logo})`:'';
+  const hp=document.getElementById('heroPrev');if(hp)hp.style.backgroundImage=BRAND.hero?`url(${BRAND.hero})`:'';
+}
+function refreshPreview(){const h=document.getElementById('pvHost');if(h)h.innerHTML=preview(brandPage);}
+
+/* ---- control blocks ---- */
+function fontOptions(sel){return `<option value="base"${!sel?' selected':''}>Base font</option>`+Object.keys(FONT_MAP).map(k=>`<option value="${k}"${sel===k?' selected':''}>${esc(FONT_MAP[k].label)}</option>`).join('');}
+function txRow(key){
+  const m=MASTER_TEXTS.find(x=>x.key===key);const val=(BRAND.texts&&BRAND.texts[key])||'';
+  const long=['formIntro','thanksBody','lockBody'].includes(key);
+  const fld=long?`<textarea class="control" style="min-height:70px" data-txk="${key}" oninput="onTxEdit(this)" placeholder="${esc(m.def)}">${esc(val)}</textarea>`:`<input class="control" data-txk="${key}" oninput="onTxEdit(this)" placeholder="${esc(m.def)}" value="${esc(val)}">`;
+  const fk=(BRAND.fonts&&BRAND.fonts[key])||'';
+  return `<div class="tx-row"><label>${esc(m.label)}</label><div class="inl">${fld}<select class="control fontsel" onchange="setElemFont('${key}',this.value)">${fontOptions(fk)}</select></div></div>`;
+}
+function textBlock(page,title,sub){return `<div class="brand-block"><h3>${title}</h3><p class="sub">${sub}</p>${PAGE_MAP[page].map(txRow).join('')}</div>`;}
+function logoBlock(){return `<div class="brand-block"><h3>Logo</h3><p class="sub">Shown on the welcome screen and in every header. PNG with transparency works best.</p><div class="asset-row"><div class="asset-preview logo" id="logoPrev">${BRAND.logo?'':'No logo'}</div><label class="btn btn-secondary upload-btn" style="padding:11px 20px;font-size:14px">Upload logo<input type="file" accept="image/*" onchange="onUpload(event,'logo')"></label><button class="ghost" onclick="clearAsset('logo')">Remove</button></div></div>`;}
+function heroBlock(){const on=m=>BRAND.heroMode===m?'on':'';const ck=m=>BRAND.heroMode===m?'checked':'';return `<div class="brand-block"><h3>Background</h3><p class="sub">Keep the signature beam, or upload your own artwork. This background is shared by the Home and Thank-you screens.</p><div class="radio-row" id="heroModeRow"><label class="radio-pill ${on('beam')}" data-mode="beam"><input type="radio" name="heroMode" value="beam" ${ck('beam')} onchange="setHeroMode('beam')">Signature beam</label><label class="radio-pill ${on('image')}" data-mode="image"><input type="radio" name="heroMode" value="image" ${ck('image')} onchange="setHeroMode('image')">Uploaded image</label></div><div class="asset-row"><div class="asset-preview" id="heroPrev">${BRAND.hero?'':'No image'}</div><label class="btn btn-secondary upload-btn" style="padding:11px 20px;font-size:14px">Upload image<input type="file" accept="image/*" onchange="onUpload(event,'hero')"></label><button class="ghost" onclick="clearAsset('hero')">Remove</button></div><p class="hint-note">Wide/landscape images look best. Large files are scaled down automatically.</p></div>`;}
+function accentBlock(){return `<div class="brand-block"><h3>Accent colour</h3><p class="sub">Recolours buttons, progress bar, and selected options. Leave as the beam gradient, or pick a solid colour.</p><div class="color-row"><input type="color" id="accentPicker" value="${BRAND.accent||'#c33bff'}" oninput="setAccent(this.value)"><button class="ghost" onclick="clearAccent()">Use beam gradient</button></div></div>`;}
+function baseFontBlock(){return `<div class="brand-block"><h3>Base copy font</h3><p class="sub">The default typeface for anything you haven’t given its own font. Per-element fonts above always win.</p><select class="control" id="fontPicker" style="max-width:320px" onchange="setFont(this.value)">${Object.keys(FONT_MAP).map(k=>`<option value="${k}"${(BRAND.font||'archivo')===k?' selected':''}>${esc(FONT_MAP[k].label)}</option>`).join('')}</select></div>`;}
+function controls(page){
+  if(page==='home')return logoBlock()+heroBlock()+textBlock('home','Home copy','Each line can take its own font — leave it on “Base font” to inherit the global one.');
+  if(page==='form')return textBlock('form','Form copy','Each line can take its own font.')+`<div class="brand-block"><p class="sub" style="margin:0">To change the questions or section names, use the <b style="color:var(--white)">Form fields</b> tab.</p></div>`;
+  if(page==='thanks')return heroBlock()+textBlock('thanks','Thank-you copy','Each line can take its own font.');
+  return accentBlock()+baseFontBlock()+textBlock('global','Admin lock copy','The screen only you see when signing in.');
+}
+
+/* ---- previews ---- */
+function ff(key){const s=elemFont(key);return s?`font-family:${s};`:'';}
+function bgLayer(){const useImg=BRAND.heroMode==='image'&&!!BRAND.hero;if(useImg)return `<div class="pv-bg" style="background:linear-gradient(rgba(10,10,11,.45),rgba(10,10,11,.68)),url(${BRAND.hero});background-size:cover;background-position:center"></div>`;return `<div class="pv-bg"><div class="pv-beam"></div><div class="pv-eclipse"></div></div>`;}
+function preview(page){return page==='home'?pvHome():page==='form'?pvForm():page==='thanks'?pvThanks():pvGlobal();}
+function pvHome(){return `<div class="pv"><div class="pv-label">Live preview</div><div class="pv-screen">${bgLayer()}<div class="pv-content">${BRAND.logo?`<img class="pv-logo" src="${BRAND.logo}">`:''}<div class="pv-eyebrow" style="${ff('eyebrow1')}">${esc(txt('eyebrow1'))}</div><div class="pv-eyebrow sm" style="${ff('eyebrow2')}">${esc(txt('eyebrow2'))}</div><div class="pv-title" style="${ff('splashTitle')}">${esc(txt('splashTitle'))}</div><div class="pv-btns"><span class="pv-btn" style="${ff('clientBtn')}">${esc(txt('clientBtn'))}</span><span class="pv-btn" style="${ff('adminBtn')}">${esc(txt('adminBtn'))}</span></div><div class="pv-foot" style="${ff('splashFoot')}">${esc(txt('splashFoot'))}</div></div></div></div>`;}
+function pvForm(){return `<div class="pv"><div class="pv-label">Live preview</div><div class="pv-screen" style="justify-content:flex-start;text-align:left"><div class="pv-content"><div class="pv-wordmark" style="${ff('wordmark')}">${esc(txt('wordmark'))} <span style="color:var(--muted);font-size:.8em">/ onboarding</span></div><div class="pv-title" style="${ff('formTitle')}text-align:left;font-size:24px;margin:12px 0 6px">${esc(txt('formTitle'))}</div><div class="pv-sub" style="${ff('formIntro')}text-align:left;margin:0 0 12px">${esc(txt('formIntro'))}</div><div class="pv-field"><div class="fl">Company name</div><div class="bx"></div></div><div class="pv-btns" style="justify-content:space-between;margin-top:14px"><span class="pv-btn" style="${ff('navBack')}">${esc(txt('navBack'))}</span><span class="pv-btn solid" style="${ff('navContinue')}">${esc(txt('navContinue'))}</span></div></div></div></div>`;}
+function pvThanks(){return `<div class="pv"><div class="pv-label">Live preview</div><div class="pv-screen">${bgLayer()}<div class="pv-content"><div class="pv-eyebrow" style="${ff('thanksEyebrow')}">${esc(txt('thanksEyebrow'))}</div><div class="pv-title" style="${ff('thanksTitle')}">${esc(txt('thanksTitle'))}</div><div class="pv-sub" style="${ff('thanksBody')}">${esc(txt('thanksBody'))}</div><div class="pv-btns"><span class="pv-btn solid" style="${ff('thanksBtn')}">${esc(txt('thanksBtn'))}</span></div></div></div></div>`;}
+function pvGlobal(){return `<div class="pv"><div class="pv-label">Live preview — admin lock</div><div class="pv-screen"><div class="pv-content"><div class="pv-eyebrow" style="${ff('lockEyebrow')}">${esc(txt('lockEyebrow'))}</div><div class="pv-title" style="${ff('lockTitle')}font-size:24px">${esc(txt('lockTitle'))}</div><div class="pv-sub" style="${ff('lockBody')}">${esc(txt('lockBody'))}</div><div class="pv-field" style="max-width:260px;margin-top:8px"><div class="bx"></div></div><div class="pv-btns"><span class="pv-btn solid">Unlock</span></div></div></div></div>`;}
+
+let txTimer;
+function onTxEdit(el){BRAND.texts[el.getAttribute('data-txk')]=el.value;applyBrand();refreshPreview();clearTimeout(txTimer);txTimer=setTimeout(()=>dbSet(K_BRAND,BRAND),300);}
+
+const views=['splash','client','thanks','lock','admin'];
+function go(v){views.forEach(id=>document.getElementById(id).classList.toggle('hidden',id!==v));window.scrollTo(0,0);if(v==='client')startForm();if(v==='admin')renderFields();if(v==='lock'){document.getElementById('emailInput').value='';document.getElementById('passInput').value='';document.getElementById('passErr').style.display='none';setTimeout(()=>document.getElementById('emailInput').focus(),50);}}
+async function adminEntry(){if(await isAdmin())go('admin');else go('lock');}
+async function adminSignOut(){await sb.auth.signOut();go('splash');}
+function confirmHome(){const started=Object.values(answers).some(v=>v&&v.length);if(started&&!confirm('Leave onboarding? Your answers on this device won’t be saved.'))return;go('splash');}
+
+function activeFields(){return FIELDS.filter(f=>f.active).sort((a,b)=>a.sort-b.sort);}
+function buildSections(){const map=[];activeFields().forEach(f=>{let s=map.find(x=>x.name===f.section);if(!s){s={name:f.section,fields:[]};map.push(s);}s.fields.push(f);});return map;}
+function startForm(){answers={};stepIndex=0;sections=buildSections();renderStep();}
+function renderProgress(){document.getElementById('progress').innerHTML=sections.map((s,i)=>`<div class="dot ${i<stepIndex?'done':i===stepIndex?'active':''}"></div>`).join('');}
+function renderStep(){
+  renderProgress();
+  const sec=sections[stepIndex],body=document.getElementById('formBody');
+  body.innerHTML=`<div class="step-label">Step ${stepIndex+1} of ${sections.length}</div><h2 class="section-title">${esc(sec.name)}</h2>`+sec.fields.map(fieldHTML).join('');
+  sec.fields.forEach(f=>{const val=answers[f.id];if(val==null)return;
+    if(f.type==='multiselect'){(val||[]).forEach(v=>{const el=body.querySelector(`input[data-fid="${f.id}"][value="${cssEsc(v)}"]`);if(el){el.checked=true;el.closest('.choice').classList.add('sel');}});}
+    else if(f.type==='select'){const el=body.querySelector(`select[data-fid="${f.id}"]`);if(el)el.value=val;}
+    else{const el=body.querySelector(`[data-fid="${f.id}"]`);if(el)el.value=val;}});
+  document.getElementById('backBtn').style.visibility=stepIndex===0?'hidden':'visible';
+  document.getElementById('backBtn').textContent=txt('navBack');
+  document.getElementById('backBtn').style.fontFamily=elemFont('navBack');
+  const nb=document.getElementById('nextBtn');const last=stepIndex===sections.length-1;
+  nb.textContent=last?txt('navSubmit'):txt('navContinue');
+  nb.style.fontFamily=last?elemFont('navSubmit'):elemFont('navContinue');
+}
+function cssEsc(s){return String(s).replace(/"/g,'\\"');}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function fieldHTML(f){const req=f.required?'<span class="req">*</span>':'';let control='';
+  if(f.type==='textarea')control=`<textarea class="control" data-fid="${f.id}" placeholder="Type your answer…"></textarea>`;
+  else if(f.type==='date')control=`<input type="date" class="control" data-fid="${f.id}" />`;
+  else if(f.type==='select')control=`<select class="control" data-fid="${f.id}"><option value="">Choose one…</option>`+(f.options||[]).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')+`</select>`;
+  else if(f.type==='multiselect')control=`<div class="choices">`+(f.options||[]).map(o=>`<label class="choice"><input type="checkbox" data-fid="${f.id}" value="${esc(o)}" onclick="this.closest('.choice').classList.toggle('sel',this.checked)"> ${esc(o)}</label>`).join('')+`</div>`;
+  else control=`<input type="text" class="control" data-fid="${f.id}" placeholder="Type your answer…" />`;
+  return `<div class="field" id="wrap_${f.id}"><label>${esc(f.label)} ${req}</label>${control}<div class="err-msg">This one’s required.</div></div>`;
+}
+function collectStep(){const sec=sections[stepIndex];let ok=true;
+  sec.fields.forEach(f=>{const wrap=document.getElementById('wrap_'+f.id);let val;
+    if(f.type==='multiselect')val=Array.from(document.querySelectorAll(`input[data-fid="${f.id}"]:checked`)).map(el=>el.value);
+    else{const el=document.querySelector(`[data-fid="${f.id}"]`);val=el?el.value.trim():'';}
+    answers[f.id]=val;const empty=f.type==='multiselect'?val.length===0:!val;
+    if(f.required&&empty){wrap.classList.add('invalid');ok=false;}else wrap.classList.remove('invalid');});
+  return ok;}
+function nextStep(){if(!collectStep())return;if(stepIndex<sections.length-1){stepIndex++;renderStep();window.scrollTo(0,0);}else submitForm();}
+function prevStep(){collectStepSilent();if(stepIndex>0){stepIndex--;renderStep();window.scrollTo(0,0);}}
+function collectStepSilent(){const sec=sections[stepIndex];sec.fields.forEach(f=>{if(f.type==='multiselect')answers[f.id]=Array.from(document.querySelectorAll(`input[data-fid="${f.id}"]:checked`)).map(el=>el.value);else{const el=document.querySelector(`[data-fid="${f.id}"]`);answers[f.id]=el?el.value.trim():'';}});}
+async function submitForm(){
+  const nameField=FIELDS.find(f=>/company name/i.test(f.label))||FIELDS.find(f=>/contact/i.test(f.label));
+  const clientName=(nameField&&answers[nameField.id])?answers[nameField.id]:'Unnamed client';
+  const record={client:clientName,submittedAt:new Date().toISOString(),answers:{...answers}};
+  const nb=document.getElementById('nextBtn'),prev=nb.textContent;nb.disabled=true;nb.textContent='Sending…';
+  try{await sbInsertSubmission(record);go('thanks');}
+  catch(e){toast('Couldn’t send your answers. Check your connection and try again.');}
+  finally{nb.disabled=false;nb.textContent=prev;}
+}
+
+async function tryUnlock(){
+  const email=document.getElementById('emailInput').value.trim();
+  const password=document.getElementById('passInput').value;
+  const btn=document.getElementById('unlockBtn'),perr=document.getElementById('passErr');
+  perr.style.display='none';btn.disabled=true;btn.textContent='Signing in…';
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  btn.disabled=false;btn.textContent='Sign in';
+  if(error){perr.style.display='block';return;}
+  go('admin');
+}
+function showTab(t){['fields','subs','brand'].forEach(x=>{document.getElementById('tab'+x[0].toUpperCase()+x.slice(1)).classList.toggle('active',x===t);document.getElementById('panel'+x[0].toUpperCase()+x.slice(1)).classList.toggle('hidden',x!==t);});if(t==='fields')renderFields();if(t==='subs')loadAndRenderSubs();if(t==='brand')renderBrand();}
+async function loadAndRenderSubs(){const list=document.getElementById('subList');document.getElementById('subCount').textContent='';document.getElementById('bulkBtn').style.display='none';list.innerHTML='<div class="empty-state"><h3>Loading…</h3><p>Fetching submissions from Supabase.</p></div>';SUBS=await sbLoadSubmissions();renderSubs();}
+function renderFields(){const list=document.getElementById('fieldList');const ordered=[...FIELDS].sort((a,b)=>a.sort-b.sort);list.innerHTML=ordered.map(f=>{const tl={text:'Short text',textarea:'Long text',date:'Date',select:'Single choice',multiselect:'Multiple choice'}[f.type]||f.type;return `<div class="fieldrow"><div class="grab" title="Reorder">⋮⋮</div><div class="meta"><div class="fl-label">${esc(f.label)}</div><div><span class="tag">${esc(f.section)}</span><span class="tag">${tl}</span>${f.required?'<span class="tag">Required</span>':''}${!f.active?'<span class="tag off">Hidden</span>':''}</div></div><div class="acts"><button class="icon-btn" title="Move up" onclick="moveField('${f.id}',-1)">↑</button><button class="icon-btn" title="Move down" onclick="moveField('${f.id}',1)">↓</button><button class="icon-btn" title="Edit" onclick="openEditor('${f.id}')">✎</button><button class="icon-btn danger" title="Delete" onclick="deleteField('${f.id}')">✕</button></div></div>`;}).join('');}
+async function moveField(id,dir){const ordered=[...FIELDS].sort((a,b)=>a.sort-b.sort);const i=ordered.findIndex(f=>f.id===id),j=i+dir;if(j<0||j>=ordered.length)return;[ordered[i].sort,ordered[j].sort]=[ordered[j].sort,ordered[i].sort];await dbSet(K_FIELDS,FIELDS);renderFields();}
+async function deleteField(id){const f=FIELDS.find(x=>x.id===id);if(!confirm(`Delete “${f.label}”? Existing submissions keep their data.`))return;FIELDS=FIELDS.filter(x=>x.id!==id);await dbSet(K_FIELDS,FIELDS);renderFields();toast('Field deleted');}
+function openEditor(id){const editing=id?FIELDS.find(f=>f.id===id):null;const f=editing||{label:'',section:'',type:'text',required:true,active:true,options:[]};const sectionsList=[...new Set(FIELDS.map(x=>x.section))];
+  document.getElementById('editorMount').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeEditor()"><div class="modal"><h3>${editing?'Edit field':'Add field'}</h3><div class="field"><label>Question / label</label><textarea class="control" id="e_label" style="min-height:64px" placeholder="e.g. What does success look like for you?">${esc(f.label)}</textarea></div><div class="row2"><div class="field"><label>Section</label><input class="control" id="e_section" list="sectionOpts" value="${esc(f.section)}" placeholder="e.g. Goals" /><datalist id="sectionOpts">${sectionsList.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></div><div class="field"><label>Type</label><select class="control" id="e_type" onchange="toggleOpts()">${['text','textarea','date','select','multiselect'].map(t=>`<option value="${t}" ${f.type===t?'selected':''}>${({text:'Short text',textarea:'Long text',date:'Date',select:'Single choice',multiselect:'Multiple choice'})[t]}</option>`).join('')}</select></div></div><div class="field ${(f.type==='select'||f.type==='multiselect')?'':'hidden'}" id="e_optsWrap"><label>Options</label><div class="opt-list" id="e_optList"></div><button class="link-btn" onclick="addOpt()">+ Add option</button></div><div class="toggle-line"><input type="checkbox" id="e_required" ${f.required?'checked':''}> <span>Required</span></div><div class="toggle-line"><input type="checkbox" id="e_active" ${f.active?'checked':''}> <span>Show on the client form</span></div><div class="modal-nav"><button class="btn btn-secondary" style="padding:11px 22px" onclick="closeEditor()">Cancel</button><button class="btn btn-primary" style="padding:11px 22px" onclick="saveField('${editing?id:''}')">${editing?'Save changes':'Add field'}</button></div></div></div>`;
+  (f.options||[]).forEach(addOpt);if(!(f.options||[]).length&&(f.type==='select'||f.type==='multiselect')){addOpt();addOpt();}}
+function toggleOpts(){const t=document.getElementById('e_type').value,wrap=document.getElementById('e_optsWrap'),show=(t==='select'||t==='multiselect');wrap.classList.toggle('hidden',!show);if(show&&!document.querySelectorAll('#e_optList .opt-item').length){addOpt();addOpt();}}
+function addOpt(val=''){const list=document.getElementById('e_optList'),row=document.createElement('div');row.className='opt-item';row.innerHTML=`<input class="control" value="${esc(val)}" placeholder="Option text" /><button class="icon-btn danger" onclick="this.parentElement.remove()">✕</button>`;list.appendChild(row);}
+function closeEditor(){document.getElementById('editorMount').innerHTML='';}
+async function saveField(id){const label=document.getElementById('e_label').value.trim();const section=document.getElementById('e_section').value.trim()||'General';const type=document.getElementById('e_type').value;const required=document.getElementById('e_required').checked;const active=document.getElementById('e_active').checked;let options=[];if(type==='select'||type==='multiselect')options=Array.from(document.querySelectorAll('#e_optList .opt-item input')).map(i=>i.value.trim()).filter(Boolean);if(!label){alert('Give the field a label first.');return;}if((type==='select'||type==='multiselect')&&options.length<1){alert('Add at least one option.');return;}if(id){const f=FIELDS.find(x=>x.id===id);Object.assign(f,{label,section,type,required,active,options});}else{const maxSort=Math.max(-1,...FIELDS.map(f=>f.sort));FIELDS.push({id:'f_'+Date.now(),sort:maxSort+1,label,section,type,required,active,options});}await dbSet(K_FIELDS,FIELDS);closeEditor();renderFields();toast(id?'Field updated':'Field added');}
+function fmtDate(iso){const d=new Date(iso);return d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})+' · '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}
+function renderSubs(){document.getElementById('subCount').textContent=SUBS.length?`(${SUBS.length})`:'';document.getElementById('bulkBtn').style.display=SUBS.length?'':'none';const list=document.getElementById('subList');if(!SUBS.length){list.innerHTML=`<div class="empty-state"><h3>No submissions yet</h3><p>When a client completes the form, their answers land here — visible only to you.</p></div>`;return;}list.innerHTML=SUBS.map(s=>`<div class="sub-card"><div><div class="who">${esc(s.client)}</div><div class="when">${fmtDate(s.submittedAt)}</div></div><div style="display:flex;gap:6px"><button class="ghost" onclick="viewSub('${s.id}')">View</button><button class="ghost" onclick="exportOne('${s.id}')">.md</button><button class="icon-btn danger" title="Delete" onclick="deleteSub('${s.id}')">✕</button></div></div><div class="sub-detail hidden" id="detail_${s.id}">${orderedAnswers(s).map(qa=>`<div class="qa"><div class="q">${esc(qa.label)}</div><div class="a ${qa.empty?'empty':''}">${qa.empty?'— left blank —':esc(qa.value)}</div></div>`).join('')}</div>`).join('');}
+function orderedAnswers(s){const ordered=[...FIELDS].sort((a,b)=>a.sort-b.sort);const rows=ordered.map(f=>{let v=s.answers[f.id];if(Array.isArray(v))v=v.join(', ');return {label:f.label,value:v||'',empty:!v};});Object.keys(s.answers).forEach(fid=>{if(!ordered.find(f=>f.id===fid)){let v=s.answers[fid];if(Array.isArray(v))v=v.join(', ');if(v)rows.push({label:'(removed field)',value:v,empty:false});}});return rows;}
+function viewSub(id){document.getElementById('detail_'+id).classList.toggle('hidden');}
+async function deleteSub(id){if(!confirm('Delete this submission? This can’t be undone.'))return;await sbDeleteSubmission(id);SUBS=SUBS.filter(s=>s.id!==id);renderSubs();toast('Submission deleted');}
+function subToMd(s){let md=`# Onboarding — ${s.client}\n\n_Submitted ${fmtDate(s.submittedAt)}_\n\n`;const ordered=[...FIELDS].sort((a,b)=>a.sort-b.sort);let cur='';ordered.forEach(f=>{let v=s.answers[f.id];if(Array.isArray(v))v=v.join(', ');if(f.section!==cur){cur=f.section;md+=`\n## ${cur}\n\n`;}md+=`**${f.label}**\n\n${v&&v.length?v:'_(left blank)_'}\n\n`;});return md;}
+function download(name,text){const blob=new Blob([text],{type:'text/markdown'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
+function slug(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')||'client';}
+function exportOne(id){const s=SUBS.find(x=>x.id===id);download(`onboarding-${slug(s.client)}.md`,subToMd(s));}
+function exportAll(){download(`saudade-onboarding-all-${new Date().toISOString().slice(0,10)}.md`,SUBS.map(subToMd).join('\n\n---\n\n'));}
+let toastT;function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
+
+boot();
+</script>
+</body>
+</html>
